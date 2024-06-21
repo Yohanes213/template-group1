@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+kafka-python
+psycopg2-binary
+mlflow
+requests
+streamlit
