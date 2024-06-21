@@ -1,0 +1,64 @@
+version: '3'
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234567
+      POSTGRES_DB: backtest
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LOG_DIRS: /kafka/kafka-logs
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+    volumes:
+      - kafka_data:/kafka
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: DockerFile
+    depends_on:
+      - db
+      - kafka
+    ports:
+      - "5000:5000"
+
+  streamlit:
+    image: samdobson/streamlit
+    command: streamlit run app.py
+    ports:
+      - "8501:8501"
+
+  mlflow:
+    image: bitnami/mlflow
+    environment:
+      MLFLOW_TRACKING_URI: http://localhost:5001
+      BACKEND_STORE_URI: postgresql://postgres:1234567@db:5432/backtest
+      ARTIFACT_ROOT: /mlflow/artifacts
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+
+volumes:
+  postgres_data:
+  kafka_data:
+  mlflow_artifacts:
